@@ -186,6 +186,30 @@ def run_for_symbol(symbol, start_date, end_date, threshold):
 
     print(f"Saved metrics to {metrics_path}")
 
+    plt.figure(figsize=(10,5))
+    plt.plot(model.predict_proba(X_test)[:,1])
+    plt.title(f"{symbol} - Probability of UP")
+    plt.xlabel("Time")
+    plt.ylabel("Probability")
+
+    plot_path = os.path.join(RESULTS_DIR, f"{symbol}_probabilities.png")
+    plt.savefig(plot_path)
+    plt.close()
+
+    print(f"Saved chart to {plot_path}")
+
+
+    plt.figure(figsize=(10,5))
+    plt.plot(y_test.values, label="Actual")
+    plt.plot(model_pred, label="Predicted", alpha=0.7)
+    plt.legend()
+
+    plot_path = os.path.join(RESULTS_DIR, f"{symbol}_comparison.png")
+    plt.savefig(plot_path)
+    plt.close()
+
+    print(f"Saved chart to {plot_path}")
+
 
     return {
         "baseline": baseline_acc,
