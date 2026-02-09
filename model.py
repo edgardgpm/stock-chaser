@@ -20,7 +20,7 @@ def train_model(X_train, y_train):
         random_state=42,
         class_weight="balanced"
     )
-    model.fit(X_train, y_train)
+    model.fit(X_train, y_train.values.ravel())
     return model
 
 
@@ -40,7 +40,7 @@ def baseline_accuracy(y_train, y_test):
     Calculate accuracy of the baseline.
     """
     
-    baseline_class = int(y_train.mean() > 0.5)
+    baseline_class = int((y_train.mean() > 0.5).iloc[0])
     predictions = np.full(len(y_test), baseline_class)
     acc = accuracy_score(y_test, predictions)
     return acc
