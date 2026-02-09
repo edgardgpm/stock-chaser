@@ -4,6 +4,7 @@
 
 # Standard data manipulation
 import os
+import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,6 +16,14 @@ import model as md
 
 # Evaluation helpers
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix 
+
+
+# ==============================
+# Save Output
+# ==============================
+
+RESULTS_DIR = "results"
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
 
 # ==============================
@@ -124,7 +133,7 @@ def print_summary(baseline_acc, model_acc, y_train, y_test, model_pred):
 # ==============================
 # Full Pipeline Per Symbol
 # ==============================
-def run_for_symbol(symbol, start_date, end_date):
+def run_for_symbol(symbol, start_date, end_date, threshold):
     """
     Execute the full ML pipeline:
         load -> feature engineer -> build dataset ->
@@ -145,7 +154,7 @@ def run_for_symbol(symbol, start_date, end_date):
     baseline_acc = md.baseline_accuracy(y_train, y_test)
     model_pred, model_acc, matrix = md.evaluate_model(model, X_test, y_test)
 
-    evaluate_with_threshold(model, X_test, y_test, THRESHOLD)
+    evaluate_with_threshold(model, X_test, y_test, threshold)
 
     print_summary(baseline_acc, model_acc, y_train, y_test, model_pred)
 
@@ -164,6 +173,20 @@ def run_for_symbol(symbol, start_date, end_date):
     print("Confusion Matrix:")
     print(matrix)
 
+
+    file_path = os.path.join(RESULTS_DIR, f"{symbol}_predictions.csv")
+    results.to_csv(file_path, index=True)
+    print(f"Saved predictions to {file_path}")
+
+    metrics_path = os.path.join(RESULTS_DIR, f"{symbol}_metrics.txt")
+
+    with open(metrics_path, "w") as f:
+        f.write(f"Baseline Accuracy: {baseline_acc:.3f}\n")
+        f.write(f"Model Acurracy: {model_acc:.3f}\n")
+
+    print(f"Saved metrics to {metrics_path}")
+
+
     return {
         "baseline": baseline_acc,
         "accuracy": model_acc
@@ -171,17 +194,33 @@ def run_for_symbol(symbol, start_date, end_date):
 
 
 # ==============================
-# Multi-Symbol Execution
+# Main Execution
 # ==============================
 if __name__ == "__main__":
 
+    # Add arguments for use via CLI
+    parser = argparse.ArgumentParser(description="Stock Direction Prediction")
+    parser.add_argument("--symbol", type=str, default="AAPL",
+                        help="Stock Ticker Symbol (e.g.: AAPL, MSFT...)")
+    
+    parser.add_argument("--start", type=str, default=START_DATE,
+                        help="Start Date for Stock")
+    
+    parser.add_argument("--end", type=str, default=END_DATE,
+                        help="End Date for Stock")
+
+    parser.add_argument("--threshold", type=float, default=THRESHOLD,
+                        help="Probability Threshold")
+
+    args = parser.parse_args()
+
     results_arr = []
 
-    # Run ML pipeline per ticker listed
-    for s in ["AAPL", "MSFT", "GOOGL"]:
-        res = run_for_symbol(s, START_DATE, END_DATE)
-        res["symbol"] = s
-        results_arr.append(res)
 
-    # Compare performance across assets
-    print(pd.DataFrame(results_arr))
+    # Run ML pipeline using the arguments provided
+    res = run_for_symbol(
+        symbol=args.symbol,
+        start_date=args.start,
+        end_date=args.end,
+        threshold=args.threshold
+    )
