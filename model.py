@@ -8,8 +8,6 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 # ==============================
 # Model Setup
 # ==============================
-
-
 def train_model(X_train, y_train):
     """
     Train a Random Forest classifier on historical stock features.

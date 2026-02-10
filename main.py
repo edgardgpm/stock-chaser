@@ -5,24 +5,21 @@
 # Standard data manipulation
 import os
 import argparse
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 
 # Project modules
 import data_loader as dl
 import features as ft
 import model as md
-
-# Evaluation helpers
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix 
-
+import dataset as ds
+import reporting as rp
+import io_utilities as utils
+import visualization as vs
 
 # ==============================
 # Save Output
 # ==============================
 
-RESULTS_DIR = "results"
+RESULTS_DIR = "stockchaser_results"
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 
@@ -54,81 +51,6 @@ TRAINING_SPLIT = 0.8
 THRESHOLD = 0.25
 
 
-# ==============================
-# Dataset Preparation
-# ==============================
-def prepare_dataset(df):
-    """
-    Build feature matrix (X) and target vector (y).
-
-    Target:
-        1 -> price will be higher after PREDICT_FORWARD_DAYS
-        0 -> price will be lower after PREDICT_FORWARD_DAYS
-
-    Remove the last rows that cannot have a future label.
-    """
-
-    X = df[FEATURE_COLUMNS]
-    y = (df["Close"].shift(-PREDICT_FORWARD_DAYS) > df["Close"]).astype(int)
-
-    X = X.iloc[:-PREDICT_FORWARD_DAYS]
-    y = y.iloc[:-PREDICT_FORWARD_DAYS]
-
-    return X, y
-
-
-# ==============================
-# Train/Test Split (Time Series Safe)
-# ==============================
-def time_series_split(X, y, train_ratio):
-    """
-    Split data without shuffling it.
-    Ensure that earlier data -> training, later data -> testing.
-    """
-
-    split_index = int(len(X) * train_ratio)
-
-    X_train = X.iloc[:split_index]
-    X_test = X.iloc[split_index:]
-    y_train = y.iloc[:split_index]
-    y_test = y.iloc[split_index:]
-
-    return X_train, X_test, y_train, y_test
-
-
-# ==============================
-# Custom Threshold Evaluation
-# ==============================
-def evaluate_with_threshold(model, X_test, y_test, threshold):
-    """
-    Allow custom decision boundary for probability evaluation.
-    """
-
-    probabilities = model.predict_proba(X_test)[:, 1]
-    preds = (probabilities > threshold).astype(int)
-
-    print("\n--- Custom Threshold Evaluation ---")
-    print(f"Accuracy: {accuracy_score(y_test, preds):.3f}")
-    print(confusion_matrix(y_test, preds))
-    print(classification_report(y_test, preds))
-
-
-# ==============================
-# Summary Metrics
-# ==============================
-def print_summary(baseline_acc, model_acc, y_train, y_test, model_pred):
-    """
-    Print dataset balance and high-level performance numbers.
-    """
-
-    print("\n--- Class Balance ---")
-    print(f"Training UP Ratio: {y_train.mean().item():.3f}")
-    print(f"Testing UP Ratio: {y_test.mean().item():.3f}")
-    print(f"Model Prediction UP Ratio: {model_pred.mean().item():.3f}")
-
-    print(f"\nBaseline Accuracy: {baseline_acc:.3f}")
-    print(f"Model Accuracy: {model_acc:.3f}")
-
 
 # ==============================
 # Full Pipeline Per Symbol
@@ -145,18 +67,20 @@ def run_for_symbol(symbol, start_date, end_date, threshold):
     df = dl.load_stock_data(symbol, start_date, end_date)
     df = ft.add_features(df)
 
-    X, y = prepare_dataset(df)
+    X, y = ds.prepare_dataset(df, FEATURE_COLUMNS, PREDICT_FORWARD_DAYS)
 
-    X_train, X_test, y_train, y_test = time_series_split(X, y, TRAINING_SPLIT)
+    X_train, X_test, y_train, y_test = ds.time_series_split(X, y, TRAINING_SPLIT)
 
     model = md.train_model(X_train, y_train)
 
     baseline_acc = md.baseline_accuracy(y_train, y_test)
     model_pred, model_acc, matrix = md.evaluate_model(model, X_test, y_test)
 
-    evaluate_with_threshold(model, X_test, y_test, threshold)
+    rp.evaluate_with_threshold(model, X_test, y_test, threshold)
 
-    print_summary(baseline_acc, model_acc, y_train, y_test, model_pred)
+    probabilities = model.predict_proba(X_test)[:, 1]
+
+    rp.print_summary(baseline_acc, model_acc, y_train, y_test, model_pred)
 
     print("\n--- Feature Importance ---")
     for name, importance in zip(FEATURE_COLUMNS, model.feature_importances_):
@@ -173,43 +97,13 @@ def run_for_symbol(symbol, start_date, end_date, threshold):
     print("Confusion Matrix:")
     print(matrix)
 
+    utils.save_file(symbol, results, RESULTS_DIR, baseline_acc, model_acc)
 
-    file_path = os.path.join(RESULTS_DIR, f"{symbol}_predictions.csv")
-    results.to_csv(file_path, index=True)
-    print(f"Saved predictions to {file_path}")
-
-    metrics_path = os.path.join(RESULTS_DIR, f"{symbol}_metrics.txt")
-
-    with open(metrics_path, "w") as f:
-        f.write(f"Baseline Accuracy: {baseline_acc:.3f}\n")
-        f.write(f"Model Acurracy: {model_acc:.3f}\n")
-
-    print(f"Saved metrics to {metrics_path}")
-
-    plt.figure(figsize=(10,5))
-    plt.plot(model.predict_proba(X_test)[:,1])
-    plt.title(f"{symbol} - Probability of UP")
-    plt.xlabel("Time")
-    plt.ylabel("Probability")
-
-    plot_path = os.path.join(RESULTS_DIR, f"{symbol}_probabilities.png")
-    plt.savefig(plot_path)
-    plt.close()
-
-    print(f"Saved chart to {plot_path}")
-
-
-    plt.figure(figsize=(10,5))
-    plt.plot(y_test.values, label="Actual")
-    plt.plot(model_pred, label="Predicted", alpha=0.7)
-    plt.legend()
-
-    plot_path = os.path.join(RESULTS_DIR, f"{symbol}_comparison.png")
-    plt.savefig(plot_path)
-    plt.close()
-
-    print(f"Saved chart to {plot_path}")
-
+    vs.plot_figures(symbol,
+                    probabilities,
+                    y_test,
+                    model_pred,
+                    RESULTS_DIR)
 
     return {
         "baseline": baseline_acc,

@@ -1,8 +1,6 @@
 # ==============================
 # Feature Setup
 # ==============================
-
-
 def add_features(df):
     """
     Add new stock features to the existing dataframe.
