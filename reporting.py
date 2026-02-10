@@ -35,3 +35,40 @@ def print_summary(baseline_acc, model_acc, y_train, y_test, model_pred):
 
     print(f"\nBaseline Accuracy: {baseline_acc:.3f}")
     print(f"Model Accuracy: {model_acc:.3f}")
+
+
+def print_feature_importances(model, feature_columns):
+    """
+    Print model feature importances if supported.
+    """
+
+    if not hasattr(model, "feature_importances_"):
+        print("\nModel does not expose feature importances.")
+        return
+
+    print("\n--- Feature Importances ---")
+    for name, importance in zip(feature_columns, model.feature_importances_):
+        print(name, round(importance, 4))
+
+
+def print_sample_predictions(X_test, y_test, predictions):
+    """
+    Display the first rows of predictions and return a dataframe combining features, actual labels, and model predictions.
+    """
+
+    results = X_test.copy()
+    results["Actual"] = y_test
+    results["Predicted"] = predictions
+
+    print("\n--- Sample Predictions ---")
+    print(results.head())
+
+    return results
+
+
+def print_confusion_matrix(matrix):
+    """
+    Print the confusion matrix returned during evaluation.
+    """
+    print("\n--- Confusion Matrix ---")
+    print(matrix)
