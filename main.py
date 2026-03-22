@@ -1,8 +1,8 @@
+"""Entry point and pipeline orchestration for StockChaser."""
+
 # ==============================
 # Library Imports
 # ==============================
-
-# Standard data manipulation
 import os
 import argparse
 
@@ -24,7 +24,16 @@ def run_pipeline_for_symbol(symbol, start_date, end_date, threshold):
     """
     Execute the full ML pipeline:
         load -> feature engineer -> build dataset ->
-        split -> train -> evaluate
+        split -> train -> evaluate -> report -> save
+        
+    Args:
+        symbol     (str):   Stock ticker symbol (e.g. 'AAPL').
+        start_date (str):   Start date in YYYY-MM-DD format.
+        end_date   (str):   End date in YYYY-MM-DD format.
+        threshold  (float): Probability cutoff for classifying a prediction as UP.
+ 
+    Returns:
+        dict: Baseline accuracy and model accuracy for this symbol.
     """
 
     print(f"\n\n===== {symbol} =====\n")
@@ -41,15 +50,16 @@ def run_pipeline_for_symbol(symbol, start_date, end_date, threshold):
     baseline_acc = md.baseline_accuracy(y_train, y_test)
     model_pred, model_acc, matrix = md.evaluate_model(model, X_test, y_test)
 
-    rp.evaluate_with_threshold(model, X_test, y_test, threshold)
-
+    # Compute probabilities once and reuse across reporting and visualization
     probabilities = model.predict_proba(X_test)[:, 1]
+
+    rp.evaluate_with_threshold(probabilities, y_test, threshold)
 
     rp.print_summary(baseline_acc, model_acc, y_train, y_test, model_pred)
 
     rp.print_feature_importances(model, cfg.FEATURE_COLUMNS)
 
-    results = rp.print_sample_predictions(X_test, y_test, model_pred)
+    results, _ = rp.print_sample_predictions(X_test, y_test, model_pred)
 
     rp.print_confusion_matrix(matrix)
 
@@ -81,23 +91,23 @@ if __name__ == "__main__":
                         help="Stock Ticker Symbol (e.g.: AAPL, MSFT...)")
     
     parser.add_argument("--start", type=str, default=cfg.START_DATE,
-                        help="Start Date for Stock")
+                        help="Start Date for Stock (YYYY-MM-DD)")
     
     parser.add_argument("--end", type=str, default=cfg.END_DATE,
-                        help="End Date for Stock")
+                        help="End Date for Stock (YYYY-MM-DD)")
 
     parser.add_argument("--threshold", type=float, default=cfg.THRESHOLD,
-                        help="Probability Threshold")
+                        help="Probability Threshold for UP Classification")
 
     args = parser.parse_args()
 
-    results_arr = []
-
-
     # Run ML pipeline using the arguments provided
-    res = run_pipeline_for_symbol(
-        symbol=args.symbol,
-        start_date=args.start,
-        end_date=args.end,
-        threshold=args.threshold
-    )
+    try:
+        res = run_pipeline_for_symbol(
+            symbol=args.symbol,
+            start_date=args.start,
+            end_date=args.end,
+            threshold=args.threshold
+        )
+    except (ValueError, ConnectionError) as e:
+        print(f"\nError: {e}")

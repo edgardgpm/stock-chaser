@@ -1,9 +1,29 @@
+"""Feature engineering utilities for StockChaser."""
+
 # ==============================
 # Feature Setup
 # ==============================
 def add_features(df):
     """
-    Add new stock features to the existing dataframe.
+    Compute technical indicators and append them as new columns
+    to the existing DataFrame.
+ 
+    Features added:
+        - Return:       Daily percentage change in closing price
+        - Return_2:     Return lagged by 2 days
+        - Return_5:     Return lagged by 5 days
+        - MA_5:         5-day simple moving average of closing price
+        - MA_10:        10-day simple moving average of closing price
+        - Volatility_5: 5-day rolling standard deviation of Return
+ 
+    Rows with NaN values (introduced by rolling/shift operations)
+    are dropped before returning.
+ 
+    Args:
+        df (pd.DataFrame): Raw OHLCV DataFrame from data_loader.
+ 
+    Returns:
+        pd.DataFrame: Original DataFrame with feature columns appended.
     """
 
     df = df.copy()

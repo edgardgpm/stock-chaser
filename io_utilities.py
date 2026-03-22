@@ -1,3 +1,5 @@
+"""File saving utilities for StockChaser."""
+
 # ==============================
 # Library Imports
 # ==============================
@@ -9,7 +11,18 @@ import os
 # ==============================
 def save_file(symbol, results, results_directory, baseline_accuracy, model_accuracy):
     """
-    Save predictions and metrics of the symbol in a results directory.
+    Save predictions and metrics for a given symbol to the results directory.
+ 
+    Outputs:
+        {symbol}_predictions.csv  — feature values with Actual and Predicted columns
+        {symbol}_metrics.txt      — baseline and model accuracy scores
+ 
+    Args:
+        symbol            (str):          Stock ticker symbol.
+        results           (pd.DataFrame): DataFrame with features, actuals, predictions.
+        results_directory (str):          Path to the output directory.
+        baseline_accuracy (float):        Naive baseline accuracy score.
+        model_accuracy    (float):        Model accuracy score.
     """
 
     file_path = os.path.join(results_directory, f"{symbol}_predictions.csv")

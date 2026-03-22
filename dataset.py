@@ -1,15 +1,25 @@
+"""Dataset preparation and time-series splitting for StockChaser."""
+
 # ==============================
 # Dataset Preparation
 # ==============================
 def prepare_dataset(df, feature_columns, predict_forward_days):
     """
-    Build feature matrix (X) and target vector (y).
-
-    Target:
-        1 -> price will be higher after predict_forward_days
-        0 -> price will be lower after predict_forward_days
-
-    Remove the last rows that cannot have a future label.
+    Build the feature matrix (X) and target vector (y).
+ 
+    Target definition:
+        1 -> closing price will be higher after predict_forward_days
+        0 -> closing price will be lower after predict_forward_days
+ 
+    The last N rows are removed since they cannot have a future label.
+ 
+    Args:
+        df                  (pd.DataFrame): DataFrame with features and Close price.
+        feature_columns     (list[str]):    List of column names to use as features.
+        predict_forward_days (int):         Number of days ahead to predict.
+ 
+    Returns:
+        tuple: (X, y) feature matrix and target vector.
     """
 
     X = df[feature_columns]
@@ -26,10 +36,19 @@ def prepare_dataset(df, feature_columns, predict_forward_days):
 # ==============================
 def time_series_split(X, y, train_ratio):
     """
-    Split data without shuffling it.
-    Ensure that earlier data -> training, later data -> testing.
+    Split data chronologically without shuffling.
+    Earlier data goes to training, later data goes to testing.
+    This prevents data leakage across the time boundary.
+ 
+    Args:
+        X           (pd.DataFrame): Feature matrix.
+        y           (pd.Series):    Target vector.
+        train_ratio (float):        Proportion of data used for training (e.g. 0.8).
+ 
+    Returns:
+        tuple: (X_train, X_test, y_train, y_test)
     """
-
+    
     split_index = int(len(X) * train_ratio)
 
     X_train = X.iloc[:split_index]
