@@ -17,10 +17,13 @@ import visualization as vs
 import config as cfg
 
 
+# Base Directory Path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # ==============================
 # Full Pipeline Per Symbol
 # ==============================
-def run_pipeline_for_symbol(symbol, start_date, end_date, threshold):
+def run_pipeline_for_symbol(symbol, start_date, end_date, threshold, results_dir):
     """
     Execute the full ML pipeline:
         load -> feature engineer -> build dataset ->
@@ -63,13 +66,13 @@ def run_pipeline_for_symbol(symbol, start_date, end_date, threshold):
 
     rp.print_confusion_matrix(matrix)
 
-    utils.save_file(symbol, results, cfg.RESULTS_DIR, baseline_acc, model_acc)
+    utils.save_file(symbol, results, results_dir, baseline_acc, model_acc)
 
     vs.plot_figures(symbol,
                     probabilities,
                     y_test,
                     model_pred,
-                    cfg.RESULTS_DIR)
+                    results_dir)
 
     return {
         "baseline": baseline_acc,
@@ -83,7 +86,8 @@ def run_pipeline_for_symbol(symbol, start_date, end_date, threshold):
 if __name__ == "__main__":
 
     # Ensure RESULTS_DIR exists
-    os.makedirs(cfg.RESULTS_DIR, exist_ok=True)
+    results_dir = os.path.join(BASE_DIR, "results")
+    os.makedirs(results_dir, exist_ok=True)
 
     # Add arguments for use via CLI
     parser = argparse.ArgumentParser(description="Stock Direction Prediction")
@@ -107,7 +111,8 @@ if __name__ == "__main__":
             symbol=args.symbol,
             start_date=args.start,
             end_date=args.end,
-            threshold=args.threshold
+            threshold=args.threshold,
+            results_dir=results_dir
         )
     except (ValueError, ConnectionError) as e:
         print(f"\nError: {e}")

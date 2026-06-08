@@ -25,3 +25,6 @@ data/
 
 # Logs
 *.log
+
+# Results / Outputs
+results/

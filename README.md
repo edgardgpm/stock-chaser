@@ -46,7 +46,7 @@ All arguments are optional and fall back to the defaults defined in `config.py`.
 ## How It Works
 
 1. **Data Load** — Downloads historical OHLCV data for the given ticker via Yahoo Finance
-2. **Feature Engineering** — Computes technical indicators: moving averages, multi-period returns, and rolling volatility
+2. **Feature Engineering** — Computes technical indicators: moving averages, MA crossover, multi-period returns, rolling volatility, RSI, MACD, and volume change
 3. **Dataset Preparation** — Builds the feature matrix (X) and target vector (y), where y = 1 if price is higher in N days, else 0
 4. **Time Split** — Splits data chronologically (no shuffling) to prevent data leakage
 5. **Training** — Trains a Random Forest classifier on the training portion
@@ -58,8 +58,12 @@ All arguments are optional and fall back to the defaults defined in `config.py`.
 
 ## Features
 - Moving averages (5-day, 10-day)
+- MA crossover (MA_5 minus MA_10)
 - Multi-period returns (1-day, 2-day, 5-day)
 - Rolling volatility (5-day)
+- RSI (14-day Relative Strength Index)
+- MACD (line, signal, and histogram)
+- Volume change (daily percentage change)
 - Automatic historical data download via Yahoo Finance
 - Time-series safe train/test split
 - Configurable probability threshold
@@ -68,13 +72,13 @@ All arguments are optional and fall back to the defaults defined in `config.py`.
 ---
 
 ## Model
-Random Forest Classifier (`scikit-learn`), trained with `class_weight="balanced"` to handle imbalanced UP/DOWN class distributions.
+Random Forest Classifier (`scikit-learn`), trained with `class_weight="balanced"` to handle imbalanced UP/DOWN class distributions. Hyperparameters are tuned via `GridSearchCV` with `TimeSeriesSplit` (5 folds) to find the best combination of depth, estimators, and leaf size while respecting the chronological ordering of the data.
 
 ---
 
 ## Outputs
 
-Results are saved to the `stockchaser_results/` folder:
+Results are saved to the `results/` folder:
 
 | File | Description |
 |---|---|
